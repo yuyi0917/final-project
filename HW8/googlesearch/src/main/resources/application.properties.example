@@ -1,0 +1,6 @@
+# Copy this file to application.properties and fill your API key/ CX
+spring.application.name=googlesearch
+google.cse.enabled=true
+google.cse.apiKey=YOUR_API_KEY_HERE
+google.cse.cx=YOUR_CX_HERE
+server.port=8080
