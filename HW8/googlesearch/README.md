@@ -1,7 +1,6 @@
 # Googlesearch (HW8)
 
 簡短說明：這是一個簡單的 Spring Boot 應用，透過 Google Custom Search 或直接解析 Google 搜尋結果，顯示搜尋標題與連結。
-<<<<<<< HEAD
 
 快速開始
 
@@ -35,5 +34,3 @@
 
 繳交
 - 上傳 GitHub 倉庫連結與搜尋結果截圖到 Moodle。
-=======
->>>>>>> fc8f01448f8a1e1049c282b68ee99a798bd82c8a

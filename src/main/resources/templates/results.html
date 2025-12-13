@@ -1,72 +1,132 @@
-package com.example.googlesearch.controller;
-
-import com.example.googlesearch.model.SearchResult;
-import com.example.googlesearch.model.User;
-import com.example.googlesearch.service.SearchEngine;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.client.RestTemplate;
-
-import java.util.ArrayList;
-import java.util.List;
-
-@Controller
-public class SearchController {
-
-    @Autowired
-    private SearchEngine searchEngine; // 改用 SearchEngine
-
-    private final List<String> searchHistory = new ArrayList<>();
-
-    @GetMapping("/")
-    public String index(Model model) {
-        int size = searchHistory.size();
-        List<String> recent = searchHistory.subList(Math.max(0, size - 5), size);
-        model.addAttribute("history", recent);
-        return "index";
-    }
-
-    @GetMapping("/search")
-    public String search(@RequestParam String query, 
-                         @RequestParam(defaultValue = "1") int start, 
-                         Model model) {
-        try {
-            if (!query.trim().isEmpty()) {
-                searchHistory.remove(query);
-                searchHistory.add(query);
-            }
-
-            // 模擬一個使用者 (可未來擴充登入功能)
-            User currentUser = new User(1, "Normal");
-
-            // 使用 SearchEngine 進行搜尋與排序
-            List<SearchResult> results = searchEngine.searchAndRank(query, currentUser, start);
-            
-            model.addAttribute("results", results);
-            model.addAttribute("query", query);
-            model.addAttribute("currentStart", start);
-            
-            return "results";
-        } catch (Exception e) {
-            e.printStackTrace();
-            model.addAttribute("error", e.getMessage());
-            return "index";
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
         }
-    }
-
-    @GetMapping("/suggest")
-    @ResponseBody
-    public String suggest(@RequestParam String q) {
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String url = "http://suggestqueries.google.com/complete/search?client=firefox&q=" + q;
-            return restTemplate.getForObject(url, String.class);
-        } catch (Exception e) {
-            return "[]";
+        .header {
+            padding: 20px;
+            border-bottom: 1px solid #ebebeb;
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
-    }
-}
+        .logo-small {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4285f4;
+            text-decoration: none;
+        }
+        .search-box {
+            width: 500px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            outline: none;
+        }
+        .search-button {
+            background-color: #f8f9fa;
+            border: 1px solid #f8f9fa;
+            border-radius: 4px;
+            color: #3c4043;
+            font-size: 14px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .results {
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .result-item {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .result-url {
+            color: #202124;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        .result-title {
+            color: #1a0dab;
+            font-size: 20px;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .result-title:hover {
+            text-decoration: underline;
+        }
+        .result-snippet {
+            color: #4d5156;
+            font-size: 14px;
+            line-height: 1.58;
+        }
+        .result-score {
+            color: #d93025;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .no-results {
+            text-align: center;
+            color: #666;
+            margin-top: 50px;
+        }
+        .pagination {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .page-btn {
+            padding: 8px 20px;
+            background: #fff;
+            border: 1px solid #dadce0;
+            border-radius: 100px;
+            text-decoration: none;
+            color: #1a73e8;
+            font-size: 14px;
+        }
+        .page-btn:hover {
+            background: #f1f3f4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo-small">Boogle🐻</a>
+        <form action="/search" method="get" style="display: flex; align-items: center; width: 100%;">
+            <input type="text" name="query" th:value="${query}" class="search-box">
+            <button type="submit" class="search-button" style="margin-left: 10px;">Search</button>
+        </form>
+    </div>
+
+    <div class="results">
+        <div th:if="${results.empty}" class="no-results">
+            <h2>找不到結果</h2>
+            <p>請嘗試其他關鍵字，或檢查您的網路連線。</p>
+        </div>
+        
+        <div th:each="result : ${results}" class="result-item">
+            <div class="result-url" th:text="${result.url}"></div>
+            <a th:href="${result.url}" th:text="${result.title}" class="result-title" target="_blank"></a>
+            <div class="result-snippet" th:text="${result.snippet}"></div>
+            <div class="result-score" th:text="'Boogle Score: ' + ${result.finalScore}"></div>
+        </div>
+
+        <div class="pagination" th:if="${!results.empty}">
+            <a th:if="${currentStart > 1}" th:href="@{/search(query=${query}, start=${currentStart - 10})}" class="page-btn">上一頁</a>
+            <a th:href="@{/search(query=${query}, start=${currentStart + 10})}" class="page-btn">下一頁</a>
+        </div>
+    </div>
+</body>
+</html>

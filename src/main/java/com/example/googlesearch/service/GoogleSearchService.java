@@ -35,34 +35,52 @@ public class GoogleSearchService {
         this.restTemplate = new RestTemplate();
     }
 
-    // ★★★ 關鍵修正：這裡必須接收 int start 參數 ★★★
     public List<SearchResult> search(String query, int start) throws IOException {
-        System.out.println("Search query: " + query + ", start: " + start);
+        System.out.println("GoogleSearchService 收到請求: " + query + ", 頁碼: " + start);
 
-        // 1. 嘗試使用 Google API
-        if (cseEnabled && apiKey != null && !apiKey.isEmpty()) {
-            try {
-                return searchWithApi(query, start);
-            } catch (Exception e) {
-                System.err.println("API 呼叫失敗，切換回爬蟲模式: " + e.getMessage());
-                // API 失敗會自動往下走，執行爬蟲
-            }
+        // API 的起始索引 (1, 11, 21...)
+        // UI 傳入的 start 通常是 1, 11, 21... 如果是頁碼則需轉換，這裡假設傳入的已經是 offset
+        // 為了保險，我們做個簡單判斷: 如果 start 是 1, 2, 3 這種頁碼格式，轉成 google offset
+        int apiStart = start;
+        if (start < 1) apiStart = 1;
+        
+        // ★★★ 關鍵修改：設定安全上限 ★★★
+        // Google Custom Search API 免費版硬性限制只能抓前 100 筆 (index 1 ~ 91)
+        // 為了確保讀取穩定，超過第 10 頁 (index > 91) 就直接停止，不送出請求
+        if (apiStart > 91) {
+            System.out.println("⚠️ 已達到 Google API 免費版搜尋上限 (前 100 筆)。停止搜尋以確保系統穩定。");
+            return new ArrayList<>(); // 直接回傳空清單，避免報錯
         }
 
-        // 2. 備援：使用爬蟲
-        // 注意：這裡呼叫 googleQuery.setSearchParameters 也需要 start
-        // 如果你的 GoogleQuery.java 還沒改好，這裡也會報錯，請務必確認 GoogleQuery 也更新了
-        googleQuery.setSearchParameters(query, start);
+        // 1. 判斷是否使用 API
+        boolean canUseApi = cseEnabled && apiKey != null && !apiKey.isEmpty() && !"YOUR_API_KEY_HERE".equals(apiKey);
+        
+        if (canUseApi) {
+            try {
+                System.out.println("嘗試使用 Google API (Index: " + apiStart + ")...");
+                return searchWithApi(query, apiStart);
+            } catch (Exception e) {
+                System.err.println("API 呼叫失敗，切換回爬蟲模式: " + e.getMessage());
+            }
+        } else {
+            System.out.println("未設定 Google API，直接使用爬蟲模式。");
+        }
+
+        // 2. 爬蟲模式 (Fallback)
+        // 爬蟲同樣建議不要翻太深，以免被封鎖
+        if (apiStart > 51) { // 爬蟲通常翻超過 5 頁就很容易被擋
+            System.out.println("⚠️ 爬蟲模式翻頁過深，自動停止以避免被 Google 封鎖 IP。");
+            return new ArrayList<>();
+        }
+
+        googleQuery.setSearchParameters(query, (apiStart - 1) / 10 + 1); // 轉回頁碼格式給爬蟲用
         return googleQuery.query();
     }
 
-    private List<SearchResult> searchWithApi(String query, int start) {
+    private List<SearchResult> searchWithApi(String query, int apiStart) {
         List<SearchResult> results = new ArrayList<>();
         try {
             String q = URLEncoder.encode(query, StandardCharsets.UTF_8);
-            // API 的 start 是從 1 開始 (1, 11, 21...)，但如果傳入 0 要轉成 1
-            int apiStart = (start < 1) ? 1 : start;
-            
             String url = String.format("https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&num=10&start=%d&q=%s", apiKey, cx, apiStart, q);
             
             ResponseEntity<Map> resp = restTemplate.getForEntity(url, Map.class);
@@ -77,7 +95,7 @@ public class GoogleSearchService {
                             Map item = (Map) itemObj;
                             String title = (String) item.get("title");
                             String link = (String) item.get("link");
-                            String snippet = (String) item.get("snippet"); // 這裡抓取摘要
+                            String snippet = (String) item.get("snippet"); 
                             
                             if (title != null && link != null) {
                                 results.add(new SearchResult(title, link, snippet));
@@ -87,7 +105,8 @@ public class GoogleSearchService {
                 }
             }
         } catch (Exception e) {
-            throw new RuntimeException("Google CSE 連線錯誤", e);
+            // 將錯誤拋出，讓外層 catch 塊處理並切換到爬蟲
+            throw new RuntimeException(e.getMessage());
         }
         return results;
     }
