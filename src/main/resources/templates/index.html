@@ -10,17 +10,16 @@
         .search-box { width: 100%; padding: 12px 20px; font-size: 16px; border: 1px solid #dfe1e5; border-radius: 24px; outline: none; box-sizing: border-box; }
         .search-box:focus { box-shadow: 0 1px 6px rgba(32,33,36,.28); border-color: rgba(223,225,229,0); }
         .search-button { margin-top: 20px; background-color: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px; color: #3c4043; padding: 10px 20px; font-size: 14px; cursor: pointer; }
-        .search-button:hover { border-color: #dadce0; box-shadow: 0 1px 1px rgba(0,0,0,.1); }
         
-        /* 自動補全選單 */
-        #suggestions { position: absolute; width: 100%; background: white; border: 1px solid #dfe1e5; border-top: none; border-radius: 0 0 24px 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 1000; text-align: left; display: none; margin-top: -2px;}
-        .suggestion-item { padding: 10px 20px; cursor: pointer; }
-        .suggestion-item:hover { background-color: #eee; }
-        
-        /* 搜尋紀錄 */
-        .history-section { margin-top: 30px; text-align: left; width: 100%; }
-        .history-tag { display: inline-block; background: #e8f0fe; color: #1967d2; padding: 6px 12px; border-radius: 100px; margin: 5px 5px 0 0; text-decoration: none; font-size: 14px;}
-        .history-tag:hover { background: #d2e3fc; }
+        /* 熱搜區塊樣式 */
+        .trending-section { margin-top: 40px; text-align: left; width: 100%; }
+        .trending-title { font-size: 14px; color: #5f6368; font-weight: bold; margin-bottom: 10px; display: block; }
+        .trending-tag { 
+            display: inline-block; background: #fce8e6; color: #c5221f; 
+            padding: 6px 12px; border-radius: 100px; margin: 5px 5px 0 0; 
+            text-decoration: none; font-size: 14px; font-weight: bold;
+        }
+        .trending-tag:hover { background: #fad2cf; }
     </style>
 </head>
 <body>
@@ -28,70 +27,17 @@
         <div class="logo">Boogle🐻</div>
         
         <form action="/search" method="get" autocomplete="off">
-            <input type="text" id="search-input" name="query" class="search-box" required oninput="fetchSuggestions()">
-            <div id="suggestions"></div>
+            <input type="text" name="query" class="search-box" required placeholder="Search...">
             <input type="submit" value="Google Search" class="search-button">
         </form>
         
-        <div class="history-section" th:if="${history != null && !history.empty}">
-            <span style="color: #5f6368; font-size: 14px;">最近搜尋：</span><br>
-            <a th:each="h : ${history}" th:href="@{/search(query=${h})}" th:text="${h}" class="history-tag"></a>
-        </div>
-        
-        <div th:if="${error}" style="color: red; margin-top: 20px;">
-            <p th:text="${error}"></p>
+        <div class="trending-section" th:if="${trending != null}">
+            <span class="trending-title">🔥 大家搜索了甚麼：</span>
+            <a th:each="term : ${trending}" 
+               th:href="@{/search(query=${term})}" 
+               th:text="${term}" 
+               class="trending-tag"></a>
         </div>
     </div>
-
-    <script>
-        function fetchSuggestions() {
-            const input = document.getElementById('search-input');
-            const box = document.getElementById('suggestions');
-            const val = input.value;
-
-            if (val.length < 1) {
-                box.style.display = 'none';
-                input.style.borderRadius = "24px";
-                return;
-            }
-
-            // 呼叫後端 API 取得建議
-            fetch('/suggest?q=' + val)
-                .then(res => res.json())
-                .then(data => {
-                    // Google 格式: ["keyword", ["suggestion1", "suggestion2"...]]
-                    const items = data[1]; 
-                    box.innerHTML = '';
-                    if (items && items.length > 0) {
-                        box.style.display = 'block';
-                        input.style.borderRadius = "24px 24px 0 0"; // 上方圓角，下方直角
-                        
-                        items.forEach(text => {
-                            const div = document.createElement('div');
-                            div.className = 'suggestion-item';
-                            div.textContent = text;
-                            div.onclick = () => {
-                                input.value = text;
-                                box.style.display = 'none';
-                                input.style.borderRadius = "24px";
-                                document.querySelector('form').submit(); // 點擊後直接搜尋
-                            };
-                            box.appendChild(div);
-                        });
-                    } else {
-                        box.style.display = 'none';
-                        input.style.borderRadius = "24px";
-                    }
-                });
-        }
-        
-        // 點擊空白處關閉選單
-        document.addEventListener('click', (e) => {
-            if (e.target.id !== 'search-input') {
-                document.getElementById('suggestions').style.display = 'none';
-                document.getElementById('search-input').style.borderRadius = "24px";
-            }
-        });
-    </script>
 </body>
 </html>

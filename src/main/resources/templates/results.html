@@ -2,116 +2,182 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Search Results</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #fff;
-        }
-        .header {
-            padding: 20px;
-            border-bottom: 1px solid #ebebeb;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        .logo-small {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4285f4;
-            text-decoration: none;
-        }
-        .search-box {
-            width: 500px;
-            padding: 10px;
-            font-size: 16px;
-            border: 1px solid #dfe1e5;
-            border-radius: 24px;
-            outline: none;
-        }
-        .search-button {
-            background-color: #f8f9fa;
-            border: 1px solid #f8f9fa;
-            border-radius: 4px;
-            color: #3c4043;
-            font-size: 14px;
-            padding: 8px 16px;
-            cursor: pointer;
-        }
-        .results {
-            padding: 20px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .result-item {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        .result-url {
-            color: #202124;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-        .result-title {
-            color: #1a0dab;
-            font-size: 20px;
-            text-decoration: none;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .result-title:hover {
-            text-decoration: underline;
-        }
-        .result-snippet {
-            color: #4d5156;
-            font-size: 14px;
-            line-height: 1.58;
-        }
-        .result-score {
-            color: #d93025;
-            font-size: 12px;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-        .no-results {
-            text-align: center;
-            color: #666;
-            margin-top: 50px;
-        }
-        .pagination {
-            margin-top: 30px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-        .page-btn {
-            padding: 8px 20px;
-            background: #fff;
-            border: 1px solid #dadce0;
-            border-radius: 100px;
-            text-decoration: none;
-            color: #1a73e8;
-            font-size: 14px;
-        }
-        .page-btn:hover {
-            background: #f1f3f4;
+        /* --- 基礎樣式 --- */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; display: flex; min-height: 100vh; }
+        
+        /* 側邊欄 (桌機：固定在左側) */
+        .sidebar { width: 300px; background: white; border-right: 1px solid #ddd; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.05); position: fixed; height: 100vh; overflow-y: auto; z-index: 1000; transition: transform 0.3s ease; }
+        .sidebar h3 { margin-top: 0; color: #1a73e8; }
+        
+        .itinerary-section { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .itinerary-title { font-weight: bold; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .itinerary-list { list-style: none; padding: 0; margin: 0; }
+        .itinerary-item { font-size: 13px; margin-bottom: 5px; padding: 5px; background: #f1f3f4; border-radius: 4px; position: relative; }
+        .remove-btn { color: red; cursor: pointer; float: right; font-weight: bold; }
+        
+        .sidebar-controls { margin-top: 20px; }
+        .btn-sidebar { display: block; width: 100%; padding: 8px; margin-bottom: 10px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-add { background-color: #e8f0fe; color: #1967d2; }
+        .btn-finish { background-color: #1a73e8; color: white; font-weight: bold; }
+        
+        /* 主內容區 (桌機：避開左右側邊欄) */
+        .main-content { margin-left: 320px; margin-right: 250px; padding: 20px; flex-grow: 1; transition: margin 0.3s ease; }
+        
+        .header { display: flex; align-items: center; margin-bottom: 20px; }
+        .logo-small { font-size: 24px; font-weight: bold; color: #4285f4; text-decoration: none; margin-right: 20px; white-space: nowrap; }
+        .search-box { width: 100%; max-width: 500px; padding: 10px; font-size: 16px; border: 1px solid #dfe1e5; border-radius: 24px; outline: none; }
+        
+        /* 搜尋結果卡片 */
+        .result-item { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: relative; word-wrap: break-word; }
+        .result-url { color: #202124; font-size: 14px; }
+        .result-title { color: #1a0dab; font-size: 18px; text-decoration: none; display: block; margin: 4px 0; }
+        .result-snippet { color: #4d5156; font-size: 14px; line-height: 1.5; margin-top: 5px; }
+        .result-score { color: #d93025; font-size: 12px; font-weight: bold; margin-top: 5px; }
+        
+        .smart-tag { background:#e8f0fe; color:#1967d2; padding:2px 8px; border-radius:12px; font-size:12px; margin-right:5px; display:inline-block; }
+        .budget-tag { background:#fce8e6; color:#c5221f; padding:2px 8px; border-radius:12px; font-size:12px; font-weight:bold; display:inline-block; }
+        
+        .add-to-itinerary-btn { display: inline-block; padding: 5px 10px; background-color: #34a853; color: white; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; }
+        .add-to-itinerary-btn:hover { background-color: #2d8e47; }
+        .maps-btn { margin-left:10px; text-decoration:none; color:#5f6368; font-size:13px; border:1px solid #dadce0; padding:4px 8px; border-radius:4px; display:inline-block;}
+        
+        /* 右側面板 */
+        .right-panel { width: 220px; padding: 20px; position: fixed; right: 0; top: 0; }
+        .trending-box { background: white; padding: 15px; border-radius: 8px; border: 1px solid #dadce0; }
+        .trending-box h4 { margin-top: 0; color: #5f6368; }
+        .trending-link { display: block; text-decoration: none; color: #1a0dab; margin-bottom: 8px; font-size: 14px; }
+        
+        /* Stage 4: 相關關鍵字樣式 */
+        .related-box { margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 8px; border: 1px solid #eee; }
+        .related-tag { display: inline-block; background: #f1f3f4; color: #202124; padding: 6px 14px; border-radius: 100px; margin: 5px 5px 0 0; text-decoration: none; font-size: 14px; }
+        .related-tag:hover { background: #e8e8e8; }
+
+        /* Modal */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; }
+        #modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; width: 300px; }
+        .modal-btn { padding: 5px 10px; margin-right: 5px; cursor: pointer; }
+        
+        .pagination { margin-top: 30px; display: flex; gap: 10px; justify-content: center; }
+        .page-btn { padding: 8px 20px; background: #fff; border: 1px solid #dadce0; border-radius: 100px; text-decoration: none; color: #1a73e8; font-size: 14px; }
+
+        .filter-bar { margin: 15px 0; display: flex; gap: 10px; }
+        .filter-btn { padding: 6px 12px; border-radius: 100px; border: 1px solid #dadce0; background: white; color: #3c4043; text-decoration: none; font-size: 14px; cursor: pointer; }
+        .filter-btn.active { background: #e8f0fe; color: #1967d2; border-color: #e8f0fe; font-weight: bold; }
+        .highlight { background-color: #fce8b2; font-weight: bold; }
+
+        /* 手機版漢堡選單按鈕 */
+        .menu-toggle { display: none; font-size: 24px; cursor: pointer; margin-right: 15px; background: none; border: none; }
+
+        /* --- ★ Stage 6: Mobile RWD 手機版樣式 (寬度小於 768px 時觸發) --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            
+            /* 1. 顯示選單按鈕 */
+            .menu-toggle { display: block; }
+            
+            /* 2. 側邊欄改為「抽屜式」 */
+            .sidebar { 
+                transform: translateX(-100%); /* 預設藏在左邊外面 */
+                width: 80%; 
+                box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+            }
+            .sidebar.active { transform: translateX(0); } /* 加上 active class 時滑出來 */
+
+            /* 3. 主內容與右側面板調整 */
+            .main-content { margin: 0; padding: 15px; width: 100%; box-sizing: border-box; }
+            .right-panel { display: none; /* 手機版隱藏右側熱搜，避免太擠 */ }
+            
+            /* 4. 搜尋區塊調整 */
+            .header { margin-bottom: 15px; }
+            .search-box { width: 100%; max-width: none; flex-grow: 1; }
+            
+            /* 5. 篩選按鈕橫向捲動 */
+            .filter-bar { overflow-x: auto; white-space: nowrap; padding-bottom: 5px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/" class="logo-small">Boogle🐻</a>
-        <form action="/search" method="get" style="display: flex; align-items: center; width: 100%;">
-            <input type="text" name="query" th:value="${query}" class="search-box">
-            <button type="submit" class="search-button" style="margin-left: 10px;">Search</button>
-        </form>
+
+    <div id="mobile-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:900;" onclick="toggleSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <h3>✈️ 我的行程表</h3>
+        <div id="itinerary-container">
+            <div class="itinerary-section" data-key="航班">
+                <div class="itinerary-title">航班</div>
+                <ul class="itinerary-list"></ul>
+            </div>
+            <div class="itinerary-section" data-key="住宿">
+                <div class="itinerary-title">住宿</div>
+                <ul class="itinerary-list"></ul>
+            </div>
+            <div class="itinerary-section" data-key="Day 1">
+                <div class="itinerary-title">Day 1</div>
+                <ul class="itinerary-list"></ul>
+            </div>
+        </div>
+        
+        <div class="sidebar-controls">
+            <button class="btn-sidebar btn-add" onclick="addNewDay()">+ 新增一天 / 自訂標題</button>
+            <button class="btn-sidebar btn-finish" onclick="submitReport()">✅ Finish & 生成報告</button>
+        </div>
+
+        <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            <h3>🇩🇰 丹麥小工具</h3>
+            <div style="background: #e6f4ea; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                <div style="font-weight:bold; color:#137333; margin-bottom:5px;">Copenhagen 天氣</div>
+                <div style="display:flex; align-items:center;">
+                    <span style="font-size: 28px; margin-right:10px;">⛅</span>
+                    <div>
+                        <div style="font-size: 20px; font-weight:bold;">12°C</div>
+                        <div style="font-size: 12px; color:#555;">多雲時晴</div>
+                    </div>
+                </div>
+            </div>
+            <div style="background: #f1f3f4; padding: 10px; border-radius: 8px;">
+                <div style="font-weight:bold; color:#202124; margin-bottom:8px; font-size:14px;">匯率換算 (DKK → TWD)</div>
+                <div style="display:flex; align-items:center;">
+                    <input type="number" id="dkk-input" placeholder="DKK" oninput="convertCurrency()" style="width: 70px; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                    <span style="margin:0 5px;">=</span>
+                    <span id="twd-output" style="font-weight:bold; color:#d93025; font-size:18px;">0</span> 
+                    <span style="font-size:12px; margin-left:3px;">TWD</span>
+                </div>
+                <div style="font-size:11px; color:#666; margin-top:5px;">(匯率約 1 : 4.65)</div>
+            </div>
+        </div>
     </div>
 
-    <div class="results">
-        <div th:if="${results.empty}" class="no-results">
+    <div class="main-content">
+        <div class="header">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            
+            <a href="/" class="logo-small">Boogle🐻</a>
+            <form action="/search" method="get" style="display: flex; align-items: center; width: 100%;">
+                <input type="text" id="search-query" name="query" th:value="${query}" class="search-box">
+                <button type="submit" class="search-button" style="margin-left: 10px; padding: 8px 16px; cursor: pointer; background-color: #f8f9fa; border: 1px solid #f8f9fa; border-radius: 4px;">Search</button>
+            </form>
+        </div>
+
+        <div class="related-box" th:if="${relatedKeywords != null && !relatedKeywords.empty}">
+            <span style="font-size:13px; color:#5f6368; font-weight:bold;">🔎 相關搜尋：</span>
+            <a th:each="word : ${relatedKeywords}" 
+               th:href="@{/search(query=${word})}" 
+               th:text="${word}" 
+               class="related-tag"></a>
+        </div>
+
+        <div class="filter-bar" th:if="${!results.empty}">
+            <a th:href="@{/search(query=${query}, filter='all')}" class="filter-btn" th:classappend="${currentFilter == null || currentFilter == 'all' ? 'active' : ''}">全部</a>
+            <a th:href="@{/search(query=${query}, filter='美食')}" class="filter-btn" th:classappend="${currentFilter == '美食' ? 'active' : ''}">🍴 美食</a>
+            <a th:href="@{/search(query=${query}, filter='住宿')}" class="filter-btn" th:classappend="${currentFilter == '住宿' ? 'active' : ''}">🏨 住宿</a>
+            <a th:href="@{/search(query=${query}, filter='景點')}" class="filter-btn" th:classappend="${currentFilter == '景點' ? 'active' : ''}">🎡 景點</a>
+            <a th:href="@{/search(query=${query}, filter='購物')}" class="filter-btn" th:classappend="${currentFilter == '購物' ? 'active' : ''}">🛍️ 購物</a>
+        </div>
+
+        <div th:if="${results.empty}" style="text-align: center; color: #666; margin-top: 50px;">
             <h2>找不到結果</h2>
             <p>請嘗試其他關鍵字，或檢查您的網路連線。</p>
         </div>
@@ -119,14 +185,142 @@
         <div th:each="result : ${results}" class="result-item">
             <div class="result-url" th:text="${result.url}"></div>
             <a th:href="${result.url}" th:text="${result.title}" class="result-title" target="_blank"></a>
-            <div class="result-snippet" th:text="${result.snippet}"></div>
+            
+            <div style="margin: 6px 0;">
+                <span th:each="tag : ${result.tags}" class="smart-tag" th:text="${tag}"></span>
+                <span th:if="${result.budgetLabel != null && result.budgetLabel != ''}" class="budget-tag" th:text="${result.budgetLabel}"></span>
+            </div>
+
+            <div class="result-snippet highlight-target" th:text="${result.snippet}"></div>
             <div class="result-score" th:text="'Boogle Score: ' + ${result.finalScore}"></div>
+            
+            <div style="margin-top: 12px; border-top: 1px solid #eee; padding-top: 8px;">
+                <button class="add-to-itinerary-btn" th:data-title="${result.title}" th:data-url="${result.url}" onclick="openAddModal(this)">[+] 加入行程</button>
+                <a th:href="'https://www.google.com/maps/search/?api=1&query=' + ${result.title}" target="_blank" class="maps-btn">📍 在地圖上查看</a>
+            </div>
         </div>
 
         <div class="pagination" th:if="${!results.empty}">
-            <a th:if="${currentStart > 1}" th:href="@{/search(query=${query}, start=${currentStart - 10})}" class="page-btn">上一頁</a>
-            <a th:href="@{/search(query=${query}, start=${currentStart + 10})}" class="page-btn">下一頁</a>
+            <a th:if="${currentStart > 1}" th:href="@{/search(query=${query}, start=${currentStart - 10}, filter=${currentFilter})}" class="page-btn">上一頁</a>
+            <a th:href="@{/search(query=${query}, start=${currentStart + 10}, filter=${currentFilter})}" class="page-btn">下一頁</a>
         </div>
     </div>
+
+    <div class="right-panel">
+        <div class="trending-box">
+            <h4>🔥 大家搜索了甚麼</h4>
+            <a th:each="term : ${trending}" th:href="@{/search(query=${term})}" th:text="${term}" class="trending-link"></a>
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div id="modal">
+            <h4 style="margin-top:0;">選擇要加入的分類：</h4>
+            <select id="section-selector" style="width: 100%; padding: 8px; margin-bottom: 20px; border-radius:4px; border:1px solid #ddd;"></select>
+            <div style="text-align: right;">
+                <button class="modal-btn" onclick="closeModal()" style="background:#fff; border:1px solid #ccc; border-radius:4px;">取消</button>
+                <button class="modal-btn" style="background: #1a73e8; color: white; border: none; border-radius:4px;" onclick="confirmAddToItinerary()">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ★ Stage 6: 手機版側邊欄切換邏輯
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('active');
+            
+            if (sidebar.classList.contains('active')) {
+                overlay.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // --- 關鍵字高亮邏輯 ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const query = document.getElementById('search-query').value;
+            if (!query) return;
+            
+            const targets = document.querySelectorAll('.highlight-target');
+            const regex = new RegExp(`(${query})`, 'gi');
+            
+            targets.forEach(target => {
+                const originalText = target.textContent;
+                const newHtml = originalText.replace(regex, '<span class="highlight">$1</span>');
+                target.innerHTML = newHtml;
+            });
+        });
+
+        // --- 匯率換算邏輯 ---
+        function convertCurrency() {
+            const dkk = document.getElementById('dkk-input').value;
+            const rate = 4.65;
+            const twd = Math.round(dkk * rate * 10) / 10;
+            document.getElementById('twd-output').textContent = twd.toLocaleString();
+        }
+
+        // --- 行程表邏輯 ---
+        let currentItem = null;
+        let itineraryData = { "航班": [], "住宿": [], "Day 1": [] };
+
+        function refreshSidebar() {
+            const container = document.getElementById('itinerary-container');
+            container.innerHTML = ''; 
+            for (const [key, items] of Object.entries(itineraryData)) {
+                const section = document.createElement('div');
+                section.className = 'itinerary-section';
+                let listHtml = '';
+                items.forEach((item, index) => {
+                    listHtml += `<li class="itinerary-item"><a href="${item.url}" target="_blank" style="text-decoration:none; color:#333;">${item.title.substring(0, 15)}...</a><span class="remove-btn" onclick="removeItem('${key}', ${index})">×</span></li>`;
+                });
+                section.innerHTML = `<div class="itinerary-title">${key}</div><ul class="itinerary-list">${listHtml}</ul>`;
+                container.appendChild(section);
+            }
+        }
+
+        function openAddModal(btn) {
+            currentItem = { title: btn.getAttribute('data-title'), url: btn.getAttribute('data-url') };
+            const selector = document.getElementById('section-selector');
+            selector.innerHTML = '';
+            for (const key of Object.keys(itineraryData)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.text = key;
+                selector.appendChild(option);
+            }
+            document.getElementById('modal-overlay').style.display = 'block';
+        }
+        function closeModal() { document.getElementById('modal-overlay').style.display = 'none'; currentItem = null; }
+        function confirmAddToItinerary() {
+            const section = document.getElementById('section-selector').value;
+            if (currentItem && section) {
+                itineraryData[section].push(currentItem);
+                refreshSidebar();
+                closeModal();
+            }
+        }
+        function removeItem(key, index) { itineraryData[key].splice(index, 1); refreshSidebar(); }
+        function addNewDay() {
+            const name = prompt("請輸入新分類名稱:");
+            if (name && !itineraryData[name]) { itineraryData[name] = []; refreshSidebar(); }
+        }
+        function submitReport() {
+            fetch('/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(itineraryData)
+            })
+            .then(response => response.text())
+            .then(html => {
+                const newWindow = window.open();
+                newWindow.document.open();
+                newWindow.document.write(html);
+                newWindow.document.close();
+            });
+        }
+        refreshSidebar();
+    </script>
 </body>
 </html>

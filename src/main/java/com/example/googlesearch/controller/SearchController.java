@@ -6,54 +6,63 @@ import com.example.googlesearch.service.SearchEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 public class SearchController {
 
     @Autowired
-    private SearchEngine searchEngine; // 改用 SearchEngine
-
-    private final List<String> searchHistory = new ArrayList<>();
+    private SearchEngine searchEngine;
 
     @GetMapping("/")
     public String index(Model model) {
-        int size = searchHistory.size();
-        List<String> recent = searchHistory.subList(Math.max(0, size - 5), size);
-        model.addAttribute("history", recent);
+        model.addAttribute("trending", searchEngine.getExternalTrendingKeywords());
         return "index";
     }
 
     @GetMapping("/search")
     public String search(@RequestParam String query, 
-                         @RequestParam(defaultValue = "1") int start, 
+                         @RequestParam(defaultValue = "1") int start,
+                         @RequestParam(required = false) String filter,
                          Model model) {
         try {
-            if (!query.trim().isEmpty()) {
-                searchHistory.remove(query);
-                searchHistory.add(query);
-            }
-
-            // 模擬一個使用者 (可未來擴充登入功能)
             User currentUser = new User(1, "Normal");
-
-            // 使用 SearchEngine 進行搜尋與排序
-            List<SearchResult> results = searchEngine.searchAndRank(query, currentUser, start);
+            
+            // 執行搜尋與排名
+            List<SearchResult> results = searchEngine.searchAndRank(query, currentUser, start, filter);
+            
+            // ★ Stage 4: 取得衍生相關關鍵字 (這裡呼叫 Engine 的新方法)
+            List<String> relatedKeywords = searchEngine.deriveRelatedKeywords(results);
             
             model.addAttribute("results", results);
             model.addAttribute("query", query);
             model.addAttribute("currentStart", start);
+            model.addAttribute("currentFilter", filter);
+            
+            // 傳給前端
+            model.addAttribute("relatedKeywords", relatedKeywords); 
+            model.addAttribute("trending", searchEngine.getExternalTrendingKeywords());
             
             return "results";
         } catch (Exception e) {
             e.printStackTrace();
             model.addAttribute("error", e.getMessage());
+            return "index";
+        }
+    }
+
+    @PostMapping("/report")
+    public String generateReport(@RequestBody Map<String, List<SearchResult>> itinerary, Model model) {
+        try {
+            Map<String, List<SearchResult>> enrichedItinerary = searchEngine.generateReportContent(itinerary);
+            model.addAttribute("itinerary", enrichedItinerary);
+            return "report";
+        } catch (Exception e) {
+            e.printStackTrace();
             return "index";
         }
     }
